@@ -1,0 +1,41 @@
+name: Auction monitor
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/5 * * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: auction-monitor
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Restore monitor state
+        uses: actions/cache/restore@v4
+        with:
+          path: state
+          key: auction-state-${{ github.run_id }}
+          restore-keys: auction-state-
+      - run: npm install
+      - run: npx playwright install --with-deps chromium
+      - name: Check auction and notify Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: npm run monitor
+      - name: Save monitor state
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: state
+          key: auction-state-${{ github.run_id }}
