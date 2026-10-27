@@ -5,9 +5,11 @@ const AUCTION_ID = "17519117";
 const AUCTION_URL = `https://www.govauctions.com/auction/${AUCTION_ID}`;
 const USERNAME = "alikoperly";
 const token = process.env.TELEGRAM_BOT_TOKEN;
+const cookiesJson = process.env.GOVAUCTIONS_COOKIES;
 const statePath = "state/state.json";
 
 if (!token) throw new Error("TELEGRAM_BOT_TOKEN is missing");
+if (!cookiesJson) throw new Error("GOVAUCTIONS_COOKIES is missing");
 fs.mkdirSync("state", { recursive: true });
 let state = {};
 if (fs.existsSync(statePath)) {
@@ -40,7 +42,15 @@ if (!state.chatId) {
 let browser;
 try {
   browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage({ locale: "en-US", timezoneId: "America/Chicago" });
+  const context = await browser.newContext({ locale: "en-US", timezoneId: "America/Chicago" });
+  const cookies = JSON.parse(cookiesJson).map(cookie => {
+    const normalized = { ...cookie };
+    if (!Number.isFinite(normalized.expires) || normalized.expires <= 0) delete normalized.expires;
+    if (!normalized.sameSite) delete normalized.sameSite;
+    return normalized;
+  });
+  await context.addCookies(cookies);
+  const page = await context.newPage();
   await page.goto(AUCTION_URL, { waitUntil: "domcontentloaded", timeout: 60000 });
   await page.getByText("Last 9 bids", { exact: true }).waitFor({ timeout: 45000 });
   await page.waitForTimeout(7000);
