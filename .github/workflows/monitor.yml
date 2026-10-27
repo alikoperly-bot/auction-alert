@@ -32,6 +32,7 @@ jobs:
       - name: Check auction and notify Telegram
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          GOVAUCTIONS_COOKIES: ${{ secrets.GOVAUCTIONS_COOKIES }}
         run: npm run monitor
       - name: Save monitor state
         if: always()
